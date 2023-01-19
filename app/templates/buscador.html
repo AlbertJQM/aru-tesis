@@ -1,0 +1,127 @@
+{% extends './layout.html' %}
+
+{% block title %}Buscador de Resoluciones{% endblock %}
+{% block body %}
+<div class="container border border-3 border-warning rounded-4 bg-gradient col-xl-10 col-xxl-8 px-4 py-5">
+    <div class="row align-items-center g-lg-5 py-5">
+        <div class="col-lg-7 text-center text-lg-start">
+            <h1 class="display-4 fw-bold lh-1 mb-3 text-warning">BÚSQUEDA DE RESOLUCIONES UNIVERSITARIAS</h1>
+            <p class="col-lg-10 fs-4">En esta sección podrás realizar búsquedas de resoluciones universitarias mediante <span class="badge bg-primary">voz</span>. Para poder comenzar es necesario brindar acceso al micrófono de su ordenador para poder obtener su consulta y realizar la búsqueda correspondiente. Además se podrá encontrar la <span class="badge bg-success">distribución de tópicos</span> de la busqueda realizada por medio del <span class="badge bg-info">modelo LDA</span> entrenado.</p>
+        </div>
+        <div class="col-md-10 mx-auto col-lg-5">
+            <div class="mb-1 p-3 border rounded-4 bg-dark shadow">
+                <label for="documento" class="form-label">Presiona la opción <span class="badge bg-success">Iniciar</span> para activar el micrófono y selecciona la opción <span class="badge bg-danger">Detener</span> para dejar de recibir las instrucciones de búsqueda:</label> 
+                <div class="mb-3 d-grid gap-2 d-md-block text-center mx-auto">
+                    <button class="btn btn-lg btn-success" id="activar">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-mic-fill" viewBox="0 0 16 16">
+                            <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"/>
+                            <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/>
+                        </svg>
+                        Iniciar
+                    </button>
+                    <button class="btn btn-lg btn-danger" id="desactivar">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-mic-fill" viewBox="0 0 16 16">
+                            <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0V3z"/>
+                            <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/>
+                        </svg>
+                        Detener
+                    </button>
+                </div>
+            </div>
+            <form id="formulario" action="/buscar" method="POST" enctype="multipart/form-data" class="p-3 border rounded-4 bg-dark shadow">                   
+                <div class="mb-3 mx-auto d-md-block">
+                    <textarea class="form-control" rows="5" id="texto" name="texto" required readonly>{{ data.texto }}</textarea>
+                </div>
+                <div class="d-grid gap-2 d-md-block text-center">
+                    <button class="btn btn-lg btn-primary" type="submit" id="boton">
+                        Buscar
+                    </button>
+                    <input class="btn btn-lg btn-danger" type="reset" value="Limpiar" id="limpiar">
+                </div>
+                <hr class="my-4">
+                <small class="text-muted">La opción <span class="badge bg-primary">Buscar</span> permite obtener el resultado de todas las resoluciones que tienen un tópico en comun con el texto de búsqueda indicado al inicio.</small>
+            </form>
+        </div>
+    </div>
+</div>
+<hr>
+<h1 class="text-center text-warning">Resultados de la búsqueda: {{ data.cantidad }}</h1>
+<div class="container-fluid border border-3 border-info bg-light text-dark">
+    <table id="tablaRes" class="table table-hover table-bordered mb-0" style="width:100%">
+        <thead class="table-dark">
+            <tr>    
+                <th>Resolución</th>
+                <th>Nro. Páginas</th>
+                <th>Tipo</th>
+                <th>Prob. LDA</th>
+                <th>Tópico</th>
+            </tr>
+        </thead>
+        {% if data.tabla != "" %}
+            <tbody>
+                {% for r in data.tabla %}
+                    <tr>
+                        <td><a href="vista/{{ r.get('nombre_res') }}">{{ r.get('nombre_res')[0:-4] }}</a></td>
+                        <td>{{ r.get('nro_pag') }}</td>
+                        <td>{{ r.get('tipo_doc') }}</td>
+                        <td>{{ r.get('prob_tópico') }}</td>
+                        <td>{{ r.get('tópico') }}</td>
+                    </tr>
+                {% endfor %}   
+            </tbody>      
+        {% endif %}
+    </table>
+    {% if data.topico != "" %}
+        <div class="accordion" id="accordionPanelsStayOpenExample">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="panelsStayOpen-headingOne">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseOne" aria-expanded="true" aria-controls="panelsStayOpen-collapseOne">
+                        <strong>Distribución de Tópicos en la Búsqueda</strong>
+                    </button>
+                </h2>
+                <div id="panelsStayOpen-collapseOne" class="accordion-collapse collapse show" aria-labelledby="panelsStayOpen-headingOne">
+                    <div class="accordion-body">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th scope="col">#</th>
+                                    <th scope="col">Tópico</th>
+                                    <th scope="col">Distribución</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i in range(5) %}
+                                    {% if data.topico[i] == data.pos %}
+                                        <tr class="table-success">
+                                    {% else %}
+                                        <tr class="table-warning">
+                                    {% endif %}
+                                        <th scope="row">{{ i+1 }}</th>
+                                        <td>{{ data.etiquetas[i] }}</td>
+                                        <td>{{ data.topico[i] }}%</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <canvas id="grafico"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+<script type="text/javascript" src="{{ url_for('static', filename='js/Chart.js') }}"></script>
+<script type="text/javascript">
+    var ctx = document.getElementById('grafico').getContext('2d');
+    var chart = new Chart(ctx, {
+        type: 'doughnut',
+        data:{
+        datasets: [{
+            data: [{{ data.topico[0] }}, {{ data.topico[1] }}, {{ data.topico[2] }}, {{ data.topico[3] }}, {{ data.topico[4] }}],
+            backgroundColor: ['yellow', 'red', 'orange','blue','violet'],
+            label: 'Distribución de Tópicos - Predicción'}],
+            labels: ['{{ data.etiquetas[0] }}','{{ data.etiquetas[1] }}','{{ data.etiquetas[2] }}','{{ data.etiquetas[3] }}','{{ data.etiquetas[4] }}']},
+        options: {responsive: true}
+    });
+</script>
+{% endblock %}

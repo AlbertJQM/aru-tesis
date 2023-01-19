@@ -1,0 +1,128 @@
+{% extends './layout.html' %}
+
+{% block title %}Analizador de Resoluciones{% endblock %}
+
+{% block body %}
+<div class="container border border-3 border-warning rounded-4 bg-gradient col-xl-10 col-xxl-8 px-4 py-5">
+    <div class="row align-items-center g-lg-5 py-5">
+        <div class="col-lg-7 text-center text-lg-start">
+            <h1 class="display-4 fw-bold lh-1 mb-3 text-warning">ANÁLISIS DE RESOLUCIONES UNIVERSITARIAS</h1>
+            <p class="col-lg-10 fs-4">En esta sección podrás analizar una resolución en base a modelos de <span class="badge bg-success">Inteligencia Artificial</span> entrenados para poder <span class="badge bg-info">identificar el tópico</span> al cual puede pertenecer dicha resolución. Para poder comenzar es necesario contar con el documento de la resolución universitaria en formato <span class="badge bg-danger">PDF</span>.</p>
+        </div>
+        <div class="col-md-10 mx-auto col-lg-5">
+            <form id="formulario" action="/procesar" method="POST" enctype="multipart/form-data" class="p-3 border rounded-4 bg-dark shadow">
+                <div class="mb-3">
+                    <label for="documento" class="form-label">Sube el documento de resolución:</label>
+                    <input id="archivo" class="form-control form-control-sm" type="file" id="documento" name="documento" accept=".pdf" required>
+                </div>
+                <div class="d-grid gap-2 d-md-block text-center">
+                    <button class="btn btn-lg btn-primary" type="submit" id="boton">
+                        Analizar
+                    </button>
+                    <input class="btn btn-lg btn-danger" type="reset" value="Limpiar" id="limpiar">
+                </div>
+                <hr class="my-4">
+                <small class="text-muted">La opción <span class="badge bg-primary">Analizar</span> permite obtener el resultado del texto analizado y el tópico asignado que se puede observar en la siguiente sección.</small>
+            </form>
+        </div>
+    </div>
+</div>
+<hr>
+<h1 class="text-center text-warning">Resultados del Análisis {{data.titulo}}</h1>
+<div class="container-fluid border border-3 border-info rounded-4 bg-light">
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+        <li class="fw-bold nav-item" role="presentation">
+            <button class="nav-link active" id="ac1-tab" data-bs-toggle="tab" data-bs-target="#ac1" type="button" role="tab" aria-controls="ac1" aria-selected="true">Documento</button>
+        </li>
+        <li class="fw-bold nav-item" role="presentation">
+            <button class="nav-link" id="ac2-tab" data-bs-toggle="tab" data-bs-target="#ac2" type="button" role="tab" aria-controls="ac2" aria-selected="false">Páginas</button>
+        </li>
+        <li class="fw-bold nav-item" role="presentation">
+            <button class="nav-link" id="ac3-tab" data-bs-toggle="tab" data-bs-target="#ac3" type="button" role="tab" aria-controls="ac3" aria-selected="false">Texto OCR</button>
+        </li>
+        <li class="fw-bold nav-item" role="presentation">
+            <button class="nav-link" id="ac4-tab" data-bs-toggle="tab" data-bs-target="#ac4" type="button" role="tab" aria-controls="ac4" aria-selected="false">Texto Pre-rocesado</button>
+        </li>
+        <li class="fw-bold nav-item" role="presentation">
+            <button class="nav-link" id="ac5-tab" data-bs-toggle="tab" data-bs-target="#ac5" type="button" role="tab" aria-controls="ac5" aria-selected="false">Tópico</button>
+        </li>
+    </ul>
+    <div class="tab-content" id="myTabContent">
+        {% if data.titulo != "" %}
+            <div class="tab-pane fade show active" id="ac1" role="tabpanel" aria-labelledby="ac1-tab" style="height: 700px;">
+                <iframe class="embed-responsive-item" src="vista/{{ data.titulo }}.pdf" width="100%" height="100%"></iframe>
+            </div>
+        {% else%}
+            <div class="tab-pane fade show active" id="ac1" role="tabpanel" aria-labelledby="ac1-tab"></div>
+        {% endif %}
+        <div class="tab-pane fade text-center" id="ac2" role="tabpanel" aria-labelledby="ac2-tab">
+            {% for i in range(data.nro_p) %}
+                <figure class="figure">
+                    <a href="./static/extra/{{ data.paginas[i] }}"><img src="./static/extra/{{ data.paginas[i] }}" class="figure-img img-fluid rounded" alt="Página {{ i+1 }}" height="45%" width="45%"></a>
+                    <figcaption class="figure-caption">Página {{ i+1 }}</figcaption>
+                </figure>    
+            {% endfor %}            
+        </div>
+        <div class="tab-pane fade text-dark" id="ac3" role="tabpanel" aria-labelledby="ac3-tab">{{ data.textoOCR }}</div>
+        <div class="tab-pane fade text-dark" id="ac4" role="tabpanel" aria-labelledby="ac4-tab">{{ data.preprocesado }}</div>
+        <div class="tab-pane fade text-dark" id="ac5" role="tabpanel" aria-labelledby="ac5-tab">
+            {% if data.topico != "" %}
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Tópico</th>
+                            <th scope="col">Predicción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in range(5) %}
+                            {% if i == data.mayor %}
+                            <tr class="table-success">
+                            {% else %}
+                            <tr class="table-warning">
+                            {% endif %}
+                                <th scope="row">{{ i+1 }}</th>
+                                <td>{{ data.etiquetas[i] }}</td>
+                                <td>{{ data.topico[i] }}%</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <canvas id="grafico"></canvas>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    window.onload = function() {
+        var e = document.getElementById("boton");
+        e.onclick = carga;
+    }
+    
+    function carga() {
+        var btn = document.getElementById("boton");
+        btn.innerHTML = "<span class='spinner-grow spinner-grow-sm' role='status' aria-hidden='true' id='texto'></span>Analizando...";
+        btn.disabled = true;
+
+        document.getElementById("limpiar").disabled = true;
+        document.getElementById('archivo').style.display = 'none'
+        document.getElementById("formulario").submit();
+    }
+</script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/Chart.js') }}"></script>
+<script type="text/javascript">
+    var ctx = document.getElementById('grafico').getContext('2d');
+    var chart = new Chart(ctx, {
+        type: 'doughnut',
+        data:{
+        datasets: [{
+            data: [{{ data.topico[0] }}, {{ data.topico[1] }}, {{ data.topico[2] }}, {{ data.topico[3] }}, {{ data.topico[4] }}],
+            backgroundColor: ['blue', 'yellow', 'red','orange','violet'],
+            label: 'Distribución de Tópicos - Predicción'}],
+            labels: ['{{ data.etiquetas[0] }}','{{ data.etiquetas[1] }}','{{ data.etiquetas[2] }}','{{ data.etiquetas[3] }}','{{ data.etiquetas[4] }}']},
+        options: {responsive: true}
+    });
+</script>
+{% endblock %}
